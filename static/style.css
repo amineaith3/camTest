@@ -1,0 +1,21 @@
+body {
+    font-family: sans-serif;
+    text-align: center;
+    padding: 2rem;
+  }
+  video, img {
+    border: 2px solid #333;
+    margin-top: 1rem;
+    width: 100%;
+    max-width: 480px;
+  }
+  #download {
+    margin-top: 1rem;
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background-color: #28a745;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+  }
+  

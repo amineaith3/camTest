@@ -4,28 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Camera Capture for OCR</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      padding: 2rem;
-    }
-    video, img {
-      border: 2px solid #333;
-      margin-top: 1rem;
-      width: 100%;
-      max-width: 480px;
-    }
-    #download {
-      margin-top: 1rem;
-      display: inline-block;
-      padding: 0.5rem 1rem;
-      background-color: #28a745;
-      color: white;
-      text-decoration: none;
-      border-radius: 4px;
-    }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <h2>📸 Capture Full HD Photo for OCR</h2>
@@ -49,14 +28,35 @@
           video: {
             width: { ideal: 1920 },
             height: { ideal: 1080 },
-            facingMode: "environment" // prefer back camera on mobile
+            facingMode: "environment"
           }
         });
         video.srcObject = stream;
-      } catch (err) {
-        alert("Camera error: " + err.message);
+      } catch (err1) {
+        console.warn("Full HD failed, trying 720p fallback:", err1);
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              facingMode: "environment"
+            }
+          });
+          video.srcObject = stream;
+        } catch (err2) {
+          console.error("720p fallback failed, using default resolution:", err2);
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: true
+            });
+            video.srcObject = stream;
+          } catch (err3) {
+            alert("Camera error: " + err3.message);
+          }
+        }
       }
     }
+    
 
     snapBtn.addEventListener("click", () => {
       const width = video.videoWidth;
@@ -75,5 +75,3 @@
   </script>
 </body>
 </html>
-<!-- This HTML file captures a photo from the camera and allows the user to download it. 
-     It uses the MediaDevices API to access the camera and draw the image on a canvas. -->
