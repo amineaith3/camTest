@@ -2,17 +2,56 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Camera Capture for OCR</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 2rem;
+    }
+    video, img {
+      border: 2px solid #333;
+      margin-top: 1rem;
+      width: 100%;
+      max-width: 480px;
+    }
+    #download {
+      margin-top: 1rem;
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      background-color: #28a745;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+    }
+    label {
+      display: block;
+      margin-top: 1rem;
+    }
+  </style>
 </head>
 <body>
   <h2>📸 Capture Full HD Photo for OCR</h2>
-  <video id="video" autoplay playsinline></video><br>
+  <video id="video" autoplay playsinline></video><br />
   <button id="snap">📸 Capture Photo</button>
-  <a id="download" href="#" download="ocr_photo.png" style="display: none;">💾 Download</a><br>
+
+  <label>
+    Zoom:
+    <input type="range" id="zoom" min="1" max="5" step="0.1" />
+  </label>
+  <label>
+    Brightness:
+    <input type="range" id="brightness" min="0" max="1" step="0.1" />
+  </label>
+  <label>
+    Contrast:
+    <input type="range" id="contrast" min="0" max="2" step="0.1" />
+  </label>
+
+  <a id="download" href="#" download="ocr_photo.png" style="display: none;">💾 Download</a><br />
   <canvas id="canvas" style="display:none;"></canvas>
-  <img id="photo" alt="Captured" style="display: none;"/>
+  <img id="photo" alt="Captured" style="display: none;" />
 
   <script>
     const video = document.getElementById("video");
@@ -21,6 +60,7 @@
     const snapBtn = document.getElementById("snap");
     const downloadLink = document.getElementById("download");
     const photo = document.getElementById("photo");
+    let videoTrack;
 
     async function startCamera() {
       try {
@@ -32,31 +72,44 @@
           }
         });
         video.srcObject = stream;
+        videoTrack = stream.getVideoTracks()[0];
+
+        const capabilities = videoTrack.getCapabilities();
+        console.log("Camera capabilities:", capabilities);
+
+        // Set max default values
+        const constraints = {};
+        if (capabilities.brightness) constraints.brightness = capabilities.brightness.max;
+        if (capabilities.contrast) constraints.contrast = capabilities.contrast.max;
+        if (capabilities.zoom) constraints.zoom = capabilities.zoom.min + 1;
+
+        await videoTrack.applyConstraints({ advanced: [constraints] });
+
+        // Initialize sliders with current settings
+        if (capabilities.zoom) {
+          document.getElementById("zoom").min = capabilities.zoom.min;
+          document.getElementById("zoom").max = capabilities.zoom.max;
+        }
+        if (capabilities.brightness) {
+          document.getElementById("brightness").min = capabilities.brightness.min;
+          document.getElementById("brightness").max = capabilities.brightness.max;
+        }
+        if (capabilities.contrast) {
+          document.getElementById("contrast").min = capabilities.contrast.min;
+          document.getElementById("contrast").max = capabilities.contrast.max;
+        }
+
       } catch (err1) {
-        console.warn("Full HD failed, trying 720p fallback:", err1);
+        console.warn("Full HD failed, trying fallback:", err1);
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-              facingMode: "environment"
-            }
-          });
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
           video.srcObject = stream;
+          videoTrack = stream.getVideoTracks()[0];
         } catch (err2) {
-          console.error("720p fallback failed, using default resolution:", err2);
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-              video: true
-            });
-            video.srcObject = stream;
-          } catch (err3) {
-            alert("Camera error: " + err3.message);
-          }
+          alert("Camera error: " + err2.message);
         }
       }
     }
-    
 
     snapBtn.addEventListener("click", () => {
       const width = video.videoWidth;
@@ -69,6 +122,21 @@
       photo.style.display = "block";
       downloadLink.href = dataURL;
       downloadLink.style.display = "inline-block";
+    });
+
+    document.getElementById("zoom").addEventListener("input", e => {
+      const val = parseFloat(e.target.value);
+      videoTrack.applyConstraints({ advanced: [{ zoom: val }] });
+    });
+
+    document.getElementById("brightness").addEventListener("input", e => {
+      const val = parseFloat(e.target.value);
+      videoTrack.applyConstraints({ advanced: [{ brightness: val }] });
+    });
+
+    document.getElementById("contrast").addEventListener("input", e => {
+      const val = parseFloat(e.target.value);
+      videoTrack.applyConstraints({ advanced: [{ contrast: val }] });
     });
 
     startCamera();
