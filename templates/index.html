@@ -36,18 +36,6 @@
   <video id="video" autoplay playsinline></video><br />
   <button id="snap">📸 Capture Photo</button>
 
-  <label>
-    Zoom:
-    <input type="range" id="zoom" min="1" max="5" step="0.1" />
-  </label>
-  <label>
-    Brightness:
-    <input type="range" id="brightness" min="0" max="1" step="0.1" />
-  </label>
-  <label>
-    Contrast:
-    <input type="range" id="contrast" min="0" max="2" step="0.1" />
-  </label>
 
   <a id="download" href="#" download="ocr_photo.png" style="display: none;">💾 Download</a><br />
   <canvas id="canvas" style="display:none;"></canvas>
@@ -79,25 +67,11 @@
 
         // Set max default values
         const constraints = {};
-        if (capabilities.brightness) constraints.brightness = capabilities.brightness.max;
-        if (capabilities.contrast) constraints.contrast = capabilities.contrast.max;
-        if (capabilities.zoom) constraints.zoom = capabilities.zoom.min + 1;
-
+        
         await videoTrack.applyConstraints({ advanced: [constraints] });
 
         // Initialize sliders with current settings
-        if (capabilities.zoom) {
-          document.getElementById("zoom").min = capabilities.zoom.min;
-          document.getElementById("zoom").max = capabilities.zoom.max;
-        }
-        if (capabilities.brightness) {
-          document.getElementById("brightness").min = capabilities.brightness.min;
-          document.getElementById("brightness").max = capabilities.brightness.max;
-        }
-        if (capabilities.contrast) {
-          document.getElementById("contrast").min = capabilities.contrast.min;
-          document.getElementById("contrast").max = capabilities.contrast.max;
-        }
+      
 
       } catch (err1) {
         console.warn("Full HD failed, trying fallback:", err1);
@@ -118,26 +92,33 @@
       canvas.height = height;
       ctx.drawImage(video, 0, 0, width, height);
       const dataURL = canvas.toDataURL("image/png");
+    
+      // Show captured image
       photo.src = dataURL;
       photo.style.display = "block";
       downloadLink.href = dataURL;
       downloadLink.style.display = "inline-block";
+    
+      // 👇 Send image (base64) to the Flask backend
+      fetch("/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: dataURL.split(",")[1] })  // remove "data:image/png;base64,"
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.result) {
+            alert("✅ OpenAI Response:\n\n" + data.result);
+          } else {
+            alert("❌ Error:\n" + data.error);
+          }
+        })
+        .catch(err => {
+          console.error("Fetch error:", err);
+          alert("An error occurred while contacting the backend.");
+        });
     });
-
-    document.getElementById("zoom").addEventListener("input", e => {
-      const val = parseFloat(e.target.value);
-      videoTrack.applyConstraints({ advanced: [{ zoom: val }] });
-    });
-
-    document.getElementById("brightness").addEventListener("input", e => {
-      const val = parseFloat(e.target.value);
-      videoTrack.applyConstraints({ advanced: [{ brightness: val }] });
-    });
-
-    document.getElementById("contrast").addEventListener("input", e => {
-      const val = parseFloat(e.target.value);
-      videoTrack.applyConstraints({ advanced: [{ contrast: val }] });
-    });
+    
 
     startCamera();
   </script>
