@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Camera Capture for OCR</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 2rem;
+    }
+    video, img {
+      border: 2px solid #333;
+      margin-top: 1rem;
+      width: 100%;
+      max-width: 480px;
+    }
+    #download {
+      margin-top: 1rem;
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      background-color: #28a745;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h2>📸 Capture Full HD Photo for OCR</h2>
+  <video id="video" autoplay playsinline></video><br>
+  <button id="snap">📸 Capture Photo</button>
+  <a id="download" href="#" download="ocr_photo.png" style="display: none;">💾 Download</a><br>
+  <canvas id="canvas" style="display:none;"></canvas>
+  <img id="photo" alt="Captured" style="display: none;"/>
+
+  <script>
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const snapBtn = document.getElementById("snap");
+    const downloadLink = document.getElementById("download");
+    const photo = document.getElementById("photo");
+
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            facingMode: "environment" // prefer back camera on mobile
+          }
+        });
+        video.srcObject = stream;
+      } catch (err) {
+        alert("Camera error: " + err.message);
+      }
+    }
+
+    snapBtn.addEventListener("click", () => {
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(video, 0, 0, width, height);
+      const dataURL = canvas.toDataURL("image/png");
+      photo.src = dataURL;
+      photo.style.display = "block";
+      downloadLink.href = dataURL;
+      downloadLink.style.display = "inline-block";
+    });
+
+    startCamera();
+  </script>
+</body>
+</html>
